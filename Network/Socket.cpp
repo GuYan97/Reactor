@@ -67,7 +67,7 @@ void Socket::listen() const{
  */
 int Socket::accept(struct sockaddr_in* addr) const{
     socklen_t addrlen = sizeof(struct sockaddr_in);
-    int connfd = ::accept(_sockfd, (struct sockaddr *)(addr), &addrlen);
+    int connfd = ::accept4(_sockfd, (struct sockaddr *)(addr), &addrlen, SOCK_NONBLOCK);
     if(connfd < 0)
         std::cout << "accept fail:" << connfd << std::endl;
     return connfd;

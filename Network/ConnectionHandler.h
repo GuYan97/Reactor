@@ -8,6 +8,7 @@
 #include "../Utils/Buffer.h"
 #include "Socket.h"
 #include <memory>
+#include <queue>
 #include <mutex>
 namespace rsvp {
 
@@ -29,20 +30,13 @@ public:
     void handleWrite() override;
     void handleClose() override;
     void handleError() override;
+
+    void sendMessage(const std::shared_ptr<Buffer>& buffer);
 private:
     std::unique_ptr<Socket> _connSocket;
-    std::shared_ptr<Buffer> _headBuffer;
-    std::shared_ptr<Buffer> _dataBuffer;
-    int _headLength;
 
-    int _headToRead;
-    int _dataToRead;
-    ReadState _readState;
-    bool _readAvailable;
-
-    std::mutex _mutex;
-
-    void handlePack();
+    std::queue<std::shared_ptr<Buffer>> _bufferQueue;
+    std::mutex _writeMutex;
 };
 
 }

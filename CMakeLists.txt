@@ -15,6 +15,7 @@ add_executable(Reactor  main.cpp
                         Network/ListenHandler.h
                         Network/Socket.cpp
                         Network/Socket.h
+                        Network/Definations.h
                         Reactor/EpollDemultiplexer.cpp
                         Reactor/EpollDemultiplexer.h
                         Reactor/EventDemultiplexer.h

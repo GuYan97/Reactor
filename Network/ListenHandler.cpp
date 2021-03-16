@@ -13,6 +13,8 @@
 #include <iostream>
 #include <unistd.h>
 #include <memory.h>
+#include <opencv2/opencv.hpp>
+#include "Definations.h"
 using namespace rsvp;
 
 /**
@@ -57,7 +59,8 @@ void ListenHandler::handleRead() {
     int fd = _listenSocket->accept(addr);
     std::cout<<"accept fd:"<<fd<<std::endl;
     std::shared_ptr<ConnectionHandler> handler = std::make_shared<ConnectionHandler>(fd);
-    Reactor::getInstance().registerHandler(handler, EPOLLIN);
+    Reactor::getInstance().registerHandler(handler, EPOLLIN | EPOLLOUT);
+
 }
 
 void ListenHandler::handleWrite() {

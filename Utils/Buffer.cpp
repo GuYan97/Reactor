@@ -1,51 +1,17 @@
-//
-// Created by guyan on 2020/12/11.
-//
-
 #include "Buffer.h"
 #include <unistd.h>
-#include <cstdio>
+#include <iostream>
 using namespace rsvp;
 
 /**
  * @brief Constructor of Buffer
  * @param length : the length of Buffer
  */
-Buffer::Buffer(int length) :
+Buffer::Buffer(size_t length) :
         _length(length),
-        _buffer(new char[length]),
-        _writeAvailable(length) {
-    _writePtr = _buffer;
-}
-
-Buffer::Buffer(const std::string& str) :
-        _length(str.length()),
-        _writeAvailable(str.length()){
-    _buffer = new char[_length];
-    char* ptr = _buffer;
-    for(auto i : str)
-        *(ptr++) = i;
-    _writePtr = _buffer;
-}
-
-
-/**
- * @brief Constructor of Buffer
- * @note Create a buffer, the data is a part of src buffer
- * @param src : data src pointer
- * @param offset : the offset of data
- * @param length  : the length of data
- */
-Buffer::Buffer(const std::shared_ptr<Buffer>& src, int offset, int length) :
-        _length(length),
-        _buffer(new char[length]),
-        _writeAvailable(length) {
-    auto srcPtr = src->getBuffer() + offset;
-
-    for(auto i  = 0; i < length; i++) {
-        _buffer[i] = *(srcPtr++);
-    }
-    _writePtr = _buffer;
+        _buffer(new char[length + prependSize]),
+        _writePtr(_buffer + prependSize),
+        _readPtr(_buffer + prependSize) {
 }
 
 /**
@@ -56,47 +22,86 @@ Buffer::~Buffer() {
 }
 
 /**
- * @brief Acquire the buffer pointer
- * @return the buffer pointer
+ * @brief Acquire the buffer posize_ter
+ * @return the buffer posize_ter
  */
 char* Buffer::getBuffer() {
-    return _buffer;
+    return _readPtr;
+}
+
+bool Buffer::empty() {
+    return _writePtr == _readPtr;
 }
 
 /**
  * @brief Acquire the buffer length
  * @return the buffer lenth
  */
-int Buffer::getLength() const {
+size_t Buffer::getLength() const {
     return _length;
 }
 
-/**
- * @brief Read data from file to buffer
- * @param fd : the file descriptor
- * @param length : the length of data to read
- * @return the actual read data length
- */
-int Buffer::writeToBuffer(int fd, int length) {
-    if(length > _writeAvailable) {
-        perror("write length error");
-        return 0;
+size_t Buffer::getReadable() const {
+    return _writePtr - _readPtr;
+}
+
+size_t Buffer::getWritable() const {
+    return getLength() - getReadable();
+}
+
+size_t Buffer::getPrependable() const {
+    return _readPtr - _buffer;
+}
+
+char *Buffer::getBuffer() const {
+    return _buffer;
+}
+
+void Buffer::retrieve(size_t len) {
+    if(len < getReadable())
+        _readPtr += len;
+    else
+        retrieveAll();
+}
+
+void Buffer::retrieveAll() {
+    _readPtr = _buffer + prependSize;
+    _writePtr = _readPtr;
+}
+
+std::string Buffer::retrieveAsString(size_t len) {
+    std::string res(_readPtr, len > getReadable()? getReadable() : len);
+    retrieve(len);
+    return res;
+}
+
+void Buffer::append(const char *data, size_t len) {
+    if(len > getWritable()) {
+        std::cout << "write not available" << std::endl;
+        return;
     }
-    int len = read(fd, _writePtr, length);
-    if(len <= 0)
-        return 0;
+
+    std::copy(data, data + len, _writePtr);
     _writePtr += len;
-    _writeAvailable -= len;
-    return len;
 }
 
-/**
- * @brief Reset the write pointer to the begin of buffer
- */
-void Buffer::resetBuffer() {
-    _writePtr = _buffer;
-    _writeAvailable = _length;
+void Buffer::append(const std::string &str) {
+    append(str.data(), str.size());
 }
 
-
+ssize_t Buffer::appendFromFd(const int fd, const size_t len) {
+    ssize_t readLength = len > getWritable()? getWritable() : len;
+    ssize_t res = read(fd, _writePtr, readLength);
+    if(res > 0)
+        _writePtr += res;
+    return res;
+}
+void Buffer::prepend(const char *data, size_t len) {
+    if(len > getPrependable()) {
+        std::cout << "prepend not available" << std::endl;
+        return;
+    }
+    _readPtr -= len;
+    std::copy(data, data + len, _readPtr);
+}
 
